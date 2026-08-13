@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0d0d0d;
+  --color-purple-brand: #3b08a1;
+  --color-purple-deep: #22075e;
+  --color-purple-mist: #f3eefc;
+
+  --font-luckiest: var(--font-urbanist);
+  --font-tagline: var(--font-inter);
+}
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+}
+
+@utility container {
+  margin-inline: auto;
+  width: 90%;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #0d0d0d;
+}
+
+html {
+  scroll-behavior: smooth;
+}
