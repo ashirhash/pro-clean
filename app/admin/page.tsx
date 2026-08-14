@@ -11,9 +11,9 @@ export default function AdminPage() {
   return (
     <>
       <Header />
-      <section className="sm:pt-44 pt-35 bg-purple-mist text-ink min-h-screen py-12 px-4">
+      <section className="sm:pt-44 pt-35 bg-purple-mist text-ink min-h-screen py-12 sm:px-4">
         <div className="container max-w-xl mx-auto">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 max-sm:flex-col max-sm:items-center max-sm:gap-2">
             <h1 className="font-luckiest font-extrabold uppercase leading-none tracking-[-0.01em] text-2xl">
               Post a Completed Job
             </h1>

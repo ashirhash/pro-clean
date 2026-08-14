@@ -9,7 +9,7 @@ function safeEqual(a: string, b: string) {
 }
 
 export function verifyCredentials(email: string, password: string) {
-  const validEmail = process.env.ADMIN_EMAIL;
+  const validEmail = process.env.ADMIN_USERNAME;
   const validPassword = process.env.ADMIN_PASSWORD;
 
   if (!validEmail || !validPassword) return false;

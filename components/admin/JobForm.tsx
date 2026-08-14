@@ -31,9 +31,14 @@ function PhotoPicker({
   onRemove: (photo: Photo) => void;
 }) {
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
+    // Snapshot the selected files into a real array before touching
+    // `.value` — in Chrome/Safari, `event.target.files` is a live FileList
+    // that gets cleared in place as soon as `.value` is reset, so reading
+    // it afterward (even from a variable holding the same reference)
+    // silently yields zero files.
+    const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    if (files) Array.from(files).forEach((file) => onAdd(file));
+    files.forEach((file) => onAdd(file));
   };
 
   return (
@@ -99,21 +104,23 @@ export default function JobForm() {
     side === "before" ? setBeforePhotos : setAfterPhotos;
 
   const addPhoto = async (side: Side, file: File) => {
-    const id = crypto.randomUUID();
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const setPhotos = listSetter(side);
+    const previewUrl = URL.createObjectURL(file);
 
-    const compressed = await compressImage(file).catch(() => file);
-    const previewUrl = URL.createObjectURL(compressed);
-
+    // Show the thumbnail + "Uploading..." immediately, before any async
+    // work, so a later failure never looks like nothing happened.
     setPhotos((prev) => [
       ...prev,
       { id, previewUrl, blobUrl: null, status: "uploading" },
     ]);
 
-    const formData = new FormData();
-    formData.append("file", compressed);
-
     try {
+      const compressed = await compressImage(file);
+
+      const formData = new FormData();
+      formData.append("file", compressed);
+
       const res = await fetch("/api/admin/stage-upload", {
         method: "POST",
         body: formData,

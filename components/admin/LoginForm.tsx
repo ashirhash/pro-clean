@@ -2,6 +2,7 @@
 
 import { useState, type SubmitEvent } from "react";
 import { useRouter } from "next/navigation";
+import Spinner from "./Spinner";
 
 type Status = "idle" | "sending" | "error";
 
@@ -81,8 +82,9 @@ export default function LoginForm() {
       <button
         type="submit"
         disabled={status === "sending"}
-        className="font-bold text-base px-[30px] py-2.5 max-sm:py-4 rounded-[10px] bg-purple-brand text-white shadow-[0_8px_20px_rgba(0,0,0,0.12)] disabled:opacity-60"
+        className="font-bold text-base px-[30px] py-2.5 max-sm:py-4 rounded-[10px] bg-purple-brand text-white shadow-[0_8px_20px_rgba(0,0,0,0.12)] disabled:opacity-60 inline-flex items-center justify-center gap-2"
       >
+        {status === "sending" && <Spinner />}
         {status === "sending" ? "Logging in..." : "Log In"}
       </button>
 

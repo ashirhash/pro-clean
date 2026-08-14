@@ -1,7 +1,8 @@
 const MAX_DIMENSION = 1600;
 const JPEG_QUALITY = 0.7;
+const COMPRESSION_TIMEOUT_MS = 8000;
 
-export async function compressImage(file: File): Promise<File> {
+async function compress(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file);
 
   const scale = Math.min(
@@ -28,4 +29,38 @@ export async function compressImage(file: File): Promise<File> {
 
   const name = file.name.replace(/\.[^.]+$/, "") + ".jpg";
   return new File([blob], name, { type: "image/jpeg" });
+}
+
+// Some mobile browsers occasionally stall (not reject) decoding certain
+// camera photos via createImageBitmap. A plain try/catch can't guard
+// against a hang, only a rejection — so this races compression against a
+// timeout and always falls back to the original file rather than blocking
+// the upload indefinitely.
+export function compressImage(file: File): Promise<File> {
+  return new Promise((resolve) => {
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(file);
+      }
+    }, COMPRESSION_TIMEOUT_MS);
+
+    compress(file)
+      .then((result) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(result);
+        }
+      })
+      .catch(() => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(file);
+        }
+      });
+  });
 }
