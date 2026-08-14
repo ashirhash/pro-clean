@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 // const navLinks = [
 //   { label: "Services", href: "#" },
@@ -12,7 +13,7 @@ export default function Header() {
       <div className="container border-b border-b-purple-mist pb-5">
         <nav className="flex items-center justify-between">
           {/* Brand */}
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3">
             <Image
               src="/brand.png"
               alt="Pro Clean Bristol logo"
@@ -20,7 +21,7 @@ export default function Header() {
               height={175}
               className="max-sm:w-[115px]"
             />
-          </div>
+          </Link>
 
           {/* Nav links */}
           {/* <div className="hidden md:flex gap-9 font-semibold text-[15px] tracking-[0.02em]">

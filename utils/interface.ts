@@ -3,3 +3,9 @@ export default interface MailDetails {
     userEmail: string;
     message: string;
   }
+
+export interface JobEmailDetails {
+  clientEmail: string;
+  beforeCount: number;
+  afterCount: number;
+}
