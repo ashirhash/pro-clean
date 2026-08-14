@@ -1,56 +1,34 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import MailDetails from "../utils/interface";
 import { buildHtml, buildText } from "@/utils/formateEmail";
 
 export const CONTACT_EMAIL = "info@pro-cleanbristol.co.uk";
+const EMAIL_FROM = "Pro Clean Bristol Website <noreply@pro-cleanbristol.co.uk>";
 
-console.log("-- ENV's -- ", {
-    SMTP_HOST: process.env.SMTP_HOST,
-    SMTP_PORT: process.env.SMTP_PORT,
-    SMTP_USER: process.env.SMTP_USER,
-    SMTP_PASS: process.env.SMTP_PASS
-});
-
-
-const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_USER,
-    port: Number(process.env.SMTP_PORT) || 587,
-    secure: process.env.SMTP_PORT === "465",
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-    },
-});
-
-const verifyMailerConnection = async () => {
-    const result = await transporter.verify();
-    console.log("result: ", result);
-    return true;
-};
-
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendMail = async (mailDetails: MailDetails) => {
-    console.log("Sending Mail");
-    
-    try {
-        if (!(await verifyMailerConnection())) {
-            console.log("NodeMailer connection failed, aborting send.");
-            return { success: false, error: "SMTP connection failed" };
-        }
+  console.log("Sending Mail");
 
-        const info = await transporter.sendMail({
-            from: `"${mailDetails.name} via Website" <${CONTACT_EMAIL}>`,
-            replyTo: mailDetails.userEmail,
-            to: CONTACT_EMAIL,
-            subject: `New Service Request from ${mailDetails.name}`,
-            text: buildText(mailDetails),
-            html: buildHtml(mailDetails),
-        });
+  try {
+    const { data, error } = await resend.emails.send({
+      from: EMAIL_FROM,
+      to: CONTACT_EMAIL,
+      replyTo: mailDetails.userEmail,
+      subject: `New Service Request from ${mailDetails.name}`,
+      text: buildText(mailDetails),
+      html: buildHtml(mailDetails),
+    });
 
-        console.log("Message sent:", info);
-        return { success: true, messageId: info.messageId };
-    } catch (err) {
-        console.error("Error while sending mail:", err);
-        return { success: false, error: "Failed to send email" };
+    if (error) {
+      console.error("Resend error:", error);
+      return { success: false, error: error.message };
     }
+
+    console.log("Message sent:", data);
+    return { success: true, messageId: data?.id };
+  } catch (err) {
+    console.error("Error while sending mail:", err);
+    return { success: false, error: "Failed to send email" };
+  }
 };

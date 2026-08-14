@@ -6,18 +6,20 @@ type Status = "idle" | "sending" | "sent" | "error";
 
 export default function Contact() {
   const [status, setStatus] = useState<Status>("idle");
+  const [errorMsg, setErrorMsg] = useState<string>("");
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus("sending");
+    setErrorMsg("");
 
     const data = new FormData(event.currentTarget);
     const payload = {
       name: String(data.get("name") ?? ""),
       userEmail: String(data.get("email") ?? ""),
       message: String(data.get("message") ?? ""),
+      company: String(data.get("company") ?? ""), // honeypot
     };
-    console.log("user data: ", data);
 
     try {
       const res = await fetch("/api/contact", {
@@ -25,9 +27,22 @@ export default function Contact() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error();
+
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setErrorMsg(
+          body?.error || "Something went wrong. Please try again."
+        );
+        setStatus("error");
+        return;
+      }
+
       setStatus("sent");
     } catch {
+      setErrorMsg(
+        "We couldn't reach the server. Check your connection and try again."
+      );
       setStatus("error");
     }
   };
@@ -84,6 +99,7 @@ export default function Contact() {
                     name="name"
                     type="text"
                     required
+                    maxLength={100}
                     placeholder="Your name"
                     className="w-full px-4 py-2.5 rounded-lg border border-ink/15 text-base font-tagline placeholder:text-ink/50 focus:outline-none focus:border-ink/40"
                   />
@@ -100,6 +116,7 @@ export default function Contact() {
                     name="email"
                     type="email"
                     required
+                    maxLength={200}
                     placeholder="you@example.com"
                     className="w-full px-4 py-2.5 rounded-lg border border-ink/15 text-base font-tagline placeholder:text-ink/50 focus:outline-none focus:border-ink/40"
                   />
@@ -115,11 +132,28 @@ export default function Contact() {
                     id="contact-message"
                     name="message"
                     required
+                    maxLength={5000}
                     rows={4}
                     placeholder="How can we help?"
                     className="w-full px-4 py-2.5 rounded-lg border border-ink/15 text-base font-tagline placeholder:text-ink/50 focus:outline-none focus:border-ink/40 resize-none"
                   />
                 </div>
+
+                {/* Honeypot: visually hidden off-screen, not display:none (some bots detect display:none and skip it) */}
+                <div
+                  className="absolute -left-[9999px] top-auto w-px h-px overflow-hidden"
+                  aria-hidden="true"
+                >
+                  <label htmlFor="company">Company</label>
+                  <input
+                    id="company"
+                    name="company"
+                    type="text"
+                    tabIndex={-1}
+                    autoComplete="off"
+                  />
+                </div>
+
                 <button
                   type="submit"
                   disabled={status === "sending"}
@@ -127,10 +161,11 @@ export default function Contact() {
                 >
                   {status === "sending" ? "Sending..." : "Send"}
                 </button>
+
                 {status === "error" && (
                   <p className="font-tagline text-red-600 text-sm">
-                    Something went wrong. Please try again, or call us on 07346
-                    814368.
+                    {errorMsg} If the problem continues, please call us on
+                    07346 814368.
                   </p>
                 )}
               </form>
