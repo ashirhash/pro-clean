@@ -17,7 +17,8 @@ async function fetchAsAttachment(
 }
 
 export async function POST(request: Request) {
-  const { clientEmail, beforeUrls, afterUrls } = await request.json();
+  const { clientEmail, beforeUrls, afterUrls, invoiceUrl, invoiceFileName } =
+    await request.json();
 
   if (typeof clientEmail !== "string" || !EMAIL_REGEX.test(clientEmail)) {
     return NextResponse.json(
@@ -43,22 +44,36 @@ export async function POST(request: Request) {
     );
   }
 
-  const allUrls = [...beforeUrls, ...afterUrls];
+  if (
+    typeof invoiceUrl !== "string" ||
+    !invoiceUrl ||
+    typeof invoiceFileName !== "string" ||
+    !invoiceFileName
+  ) {
+    return NextResponse.json(
+      { error: "An invoice is required." },
+      { status: 400 }
+    );
+  }
+
+  const allUrls = [...beforeUrls, ...afterUrls, invoiceUrl];
 
   try {
-    const [beforeImages, afterImages] = await Promise.all([
+    const [beforeImages, afterImages, invoice] = await Promise.all([
       Promise.all(
         beforeUrls.map((url, i) => fetchAsAttachment(url, `before-${i + 1}.jpg`))
       ),
       Promise.all(
         afterUrls.map((url, i) => fetchAsAttachment(url, `after-${i + 1}.jpg`))
       ),
+      fetchAsAttachment(invoiceUrl, invoiceFileName),
     ]);
 
     const result = await sendJobCompletionEmail({
       clientEmail,
       beforeImages,
       afterImages,
+      invoice,
     });
 
     if (!result.success) {

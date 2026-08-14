@@ -43,15 +43,18 @@ export const sendJobCompletionEmail = async ({
   clientEmail,
   beforeImages,
   afterImages,
+  invoice,
 }: {
   clientEmail: string;
   beforeImages: EmailAttachment[];
   afterImages: EmailAttachment[];
+  invoice: EmailAttachment;
 }) => {
   const details = {
     clientEmail,
     beforeCount: beforeImages.length,
     afterCount: afterImages.length,
+    invoiceFileName: invoice.filename,
   };
 
   try {
@@ -61,7 +64,7 @@ export const sendJobCompletionEmail = async ({
       subject: JOB_EMAIL_SUBJECT,
       text: buildJobText(details),
       html: buildJobHtml(details),
-      attachments: [...beforeImages, ...afterImages],
+      attachments: [...beforeImages, ...afterImages, invoice],
     });
 
     if (error) {

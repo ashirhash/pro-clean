@@ -14,6 +14,15 @@ interface Photo {
   status: PhotoStatus;
 }
 
+interface InvoiceFile {
+  fileName: string;
+  blobUrl: string | null;
+  status: PhotoStatus;
+  error?: string;
+}
+
+const INVOICE_ACCEPT = ".pdf,.doc,.docx,.png,.jpg,.jpeg";
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const inputClass =
@@ -93,9 +102,64 @@ function PhotoPicker({
   );
 }
 
+function InvoicePicker({
+  invoice,
+  onAdd,
+  onRemove,
+}: {
+  invoice: InvoiceFile | null;
+  onAdd: (file: File) => void;
+  onRemove: () => void;
+}) {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (file) onAdd(file);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="font-tagline font-semibold text-sm">Invoice</span>
+
+      {invoice ? (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-ink/15">
+          <span
+            className="font-tagline text-sm truncate"
+            title={invoice.error}
+          >
+            {invoice.status === "uploading" && "Uploading… "}
+            {invoice.status === "error" &&
+              `Failed: ${invoice.error || "Upload failed"} — `}
+            {invoice.fileName}
+          </span>
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Remove invoice"
+            className="shrink-0 w-5 h-5 rounded-full bg-ink/10 text-ink text-xs leading-5 text-center"
+          >
+            ×
+          </button>
+        </div>
+      ) : (
+        <label className="w-fit px-4 py-2.5 rounded-lg border border-dashed border-ink/30 text-ink/50 text-sm font-tagline cursor-pointer">
+          + Add Invoice (PDF, Word, PNG, or JPG)
+          <input
+            type="file"
+            accept={INVOICE_ACCEPT}
+            onChange={handleChange}
+            className="hidden"
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export default function JobForm() {
   const [beforePhotos, setBeforePhotos] = useState<Photo[]>([]);
   const [afterPhotos, setAfterPhotos] = useState<Photo[]>([]);
+  const [invoice, setInvoice] = useState<InvoiceFile | null>(null);
   const [clientEmail, setClientEmail] = useState("");
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -154,15 +218,54 @@ export default function JobForm() {
     }
   };
 
+  const addInvoice = async (file: File) => {
+    setInvoice({ fileName: file.name, blobUrl: null, status: "uploading" });
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/admin/stage-upload", {
+        method: "POST",
+        body: formData,
+      });
+      const body = await res.json().catch(() => ({}));
+
+      if (!res.ok) throw new Error(body?.error || "Upload failed");
+
+      setInvoice({ fileName: file.name, blobUrl: body.url, status: "ready" });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Upload failed";
+      setInvoice({
+        fileName: file.name,
+        blobUrl: null,
+        status: "error",
+        error: message,
+      });
+    }
+  };
+
+  const removeInvoice = () => {
+    if (invoice?.blobUrl) {
+      fetch("/api/admin/stage-upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: invoice.blobUrl }),
+      }).catch(() => {});
+    }
+    setInvoice(null);
+  };
+
   const readyUrls = (photos: Photo[]) =>
     photos.filter((p) => p.status === "ready").map((p) => p.blobUrl as string);
 
-  const hasPendingUploads = [...beforePhotos, ...afterPhotos].some(
-    (p) => p.status === "uploading"
-  );
+  const hasPendingUploads =
+    [...beforePhotos, ...afterPhotos].some((p) => p.status === "uploading") ||
+    invoice?.status === "uploading";
   const canSubmit =
     readyUrls(beforePhotos).length > 0 &&
     readyUrls(afterPhotos).length > 0 &&
+    invoice?.status === "ready" &&
     EMAIL_REGEX.test(clientEmail) &&
     !hasPendingUploads &&
     status !== "sending";
@@ -172,12 +275,13 @@ export default function JobForm() {
     afterPhotos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     setBeforePhotos([]);
     setAfterPhotos([]);
+    setInvoice(null);
     setClientEmail("");
   };
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || invoice?.status !== "ready") return;
 
     setStatus("sending");
     setErrorMsg("");
@@ -190,6 +294,8 @@ export default function JobForm() {
           clientEmail,
           beforeUrls: readyUrls(beforePhotos),
           afterUrls: readyUrls(afterPhotos),
+          invoiceUrl: invoice.blobUrl,
+          invoiceFileName: invoice.fileName,
         }),
       });
 
@@ -248,6 +354,8 @@ export default function JobForm() {
         onAdd={(file) => addPhoto("after", file)}
         onRemove={(photo) => removePhoto("after", photo)}
       />
+
+      <InvoicePicker invoice={invoice} onAdd={addInvoice} onRemove={removeInvoice} />
 
       <div className="flex flex-col gap-2">
         <label

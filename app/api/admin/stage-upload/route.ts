@@ -13,13 +13,16 @@ export async function POST(request: Request) {
   }
 
   if (file.size > MAX_UPLOAD_BYTES) {
-    return NextResponse.json({ error: "Image is too large." }, { status: 400 });
+    return NextResponse.json({ error: "File is too large." }, { status: 400 });
   }
 
-  const blob = await put(`job-photos/${randomUUID()}.jpg`, file, {
+  const dotIndex = file.name.lastIndexOf(".");
+  const extension = dotIndex >= 0 ? file.name.slice(dotIndex) : "";
+
+  const blob = await put(`job-uploads/${randomUUID()}${extension}`, file, {
     access: "private",
     addRandomSuffix: true,
-    contentType: file.type || "image/jpeg",
+    contentType: file.type || "application/octet-stream",
   });
 
   return NextResponse.json({ url: blob.url });

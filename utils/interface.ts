@@ -8,4 +8,5 @@ export interface JobEmailDetails {
   clientEmail: string;
   beforeCount: number;
   afterCount: number;
+  invoiceFileName: string;
 }
