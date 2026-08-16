@@ -119,7 +119,9 @@ function InvoicePicker({
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-tagline font-semibold text-sm">Invoice</span>
+      <span className="font-tagline font-semibold text-sm">
+        Invoice <span className="font-normal text-ink/50">(optional)</span>
+      </span>
 
       {invoice ? (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-lg border border-ink/15">
@@ -262,10 +264,16 @@ export default function JobForm() {
   const hasPendingUploads =
     [...beforePhotos, ...afterPhotos].some((p) => p.status === "uploading") ||
     invoice?.status === "uploading";
+
+  // Invoice is optional: it's fine to submit with no invoice at all, but if
+  // the admin attached one, don't let them submit while it's still
+  // uploading or in a failed state — that would silently drop it.
+  const invoiceOk = !invoice || invoice.status === "ready";
+
   const canSubmit =
     readyUrls(beforePhotos).length > 0 &&
     readyUrls(afterPhotos).length > 0 &&
-    invoice?.status === "ready" &&
+    invoiceOk &&
     EMAIL_REGEX.test(clientEmail) &&
     !hasPendingUploads &&
     status !== "sending";
@@ -281,7 +289,7 @@ export default function JobForm() {
 
   const handleSubmit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canSubmit || invoice?.status !== "ready") return;
+    if (!canSubmit) return;
 
     setStatus("sending");
     setErrorMsg("");
@@ -294,8 +302,8 @@ export default function JobForm() {
           clientEmail,
           beforeUrls: readyUrls(beforePhotos),
           afterUrls: readyUrls(afterPhotos),
-          invoiceUrl: invoice.blobUrl,
-          invoiceFileName: invoice.fileName,
+          invoiceUrl: invoice?.status === "ready" ? invoice.blobUrl : null,
+          invoiceFileName: invoice?.status === "ready" ? invoice.fileName : null,
         }),
       });
 

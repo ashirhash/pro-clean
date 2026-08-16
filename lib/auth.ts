@@ -5,14 +5,14 @@ function hash(value: string) {
 }
 
 function safeEqual(a: string, b: string) {
-  return timingSafeEqual(hash(a), hash(b));
+  return timingSafeEqual(hash(a), hash(b)); 
 }
 
-export function verifyCredentials(email: string, password: string) {
-  const validEmail = process.env.ADMIN_USERNAME;
+export function verifyCredentials(username: string, password: string) {
+  const validUsername = process.env.ADMIN_USERNAME;
   const validPassword = process.env.ADMIN_PASSWORD;
 
-  if (!validEmail || !validPassword) return false;
+  if (!validUsername || !validPassword) return false;
 
-  return safeEqual(email, validEmail) && safeEqual(password, validPassword);
+  return safeEqual(username, validUsername) && safeEqual(password, validPassword);
 }

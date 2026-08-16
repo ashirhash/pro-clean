@@ -5,7 +5,7 @@ export const buildHtml = (mailDetails: MailDetails) => {
   return `
   <div style="font-family: Arial, Helvetica, sans-serif; background-color:#f4f6f8; padding: 24px;">
     <div style="max-width: 560px; margin: 0 auto; background:#ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08);">
-      <div style="background-color:#0f766e; padding: 20px 24px;">
+      <div style="background-color:#3b08a1; padding: 20px 24px;">
         <h2 style="margin:0; color:#ffffff; font-size: 18px;">New Service Request</h2>
       </div>
       <div style="padding: 24px;">
@@ -17,7 +17,7 @@ export const buildHtml = (mailDetails: MailDetails) => {
           <tr>
             <td style="padding: 8px 0; color:#6b7280; font-size:13px;">Email</td>
             <td style="padding: 8px 0; color:#111827; font-size:14px;">
-              <a href="mailto:${escapeHtml(userEmail)}" style="color:#0f766e; text-decoration:none;">${escapeHtml(userEmail)}</a>
+              <a href="mailto:${escapeHtml(userEmail)}" style="color:#3b08a1; text-decoration:none;">${escapeHtml(userEmail)}</a>
             </td>
           </tr>
         </table>

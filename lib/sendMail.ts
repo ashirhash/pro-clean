@@ -4,7 +4,7 @@ import { buildHtml, buildText } from "@/utils/formateEmail";
 import { buildJobHtml, buildJobText, JOB_EMAIL_SUBJECT } from "@/utils/formatJobEmail";
 
 export const CONTACT_EMAIL = "info@pro-cleanbristol.co.uk";
-const EMAIL_FROM = "Pro Clean Bristol Website <noreply@pro-cleanbristol.co.uk>";
+const EMAIL_FROM = "Pro Clean Bristol <noreply@pro-cleanbristol.co.uk>";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -48,14 +48,18 @@ export const sendJobCompletionEmail = async ({
   clientEmail: string;
   beforeImages: EmailAttachment[];
   afterImages: EmailAttachment[];
-  invoice: EmailAttachment;
+  invoice?: EmailAttachment;
 }) => {
   const details = {
     clientEmail,
     beforeCount: beforeImages.length,
     afterCount: afterImages.length,
-    invoiceFileName: invoice.filename,
+    invoiceFileName: invoice?.filename,
   };
+
+  const attachments = invoice
+    ? [...beforeImages, ...afterImages, invoice]
+    : [...beforeImages, ...afterImages];
 
   try {
     const { data, error } = await resend.emails.send({
@@ -64,7 +68,7 @@ export const sendJobCompletionEmail = async ({
       subject: JOB_EMAIL_SUBJECT,
       text: buildJobText(details),
       html: buildJobHtml(details),
-      attachments: [...beforeImages, ...afterImages, invoice],
+      attachments,
     });
 
     if (error) {

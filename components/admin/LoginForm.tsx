@@ -18,7 +18,7 @@ export default function LoginForm() {
 
     const data = new FormData(event.currentTarget);
     const payload = {
-      email: String(data.get("email") ?? ""),
+      username: String(data.get("username") ?? ""),
       password: String(data.get("password") ?? ""),
     };
 
@@ -50,15 +50,15 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div className="flex flex-col gap-2">
-        <label htmlFor="email" className="font-tagline font-semibold text-sm">
-          Email
+        <label htmlFor="username" className="font-tagline font-semibold text-sm">
+          Username
         </label>
         <input
-          id="email"
-          name="email"
-          type="email"
+          id="username"
+          name="username"
+          type="text"
           required
-          placeholder="you@example.com"
+          placeholder="username"
           className="w-full px-4 py-2.5 rounded-lg border border-ink/15 text-base font-tagline placeholder:text-ink/50 focus:outline-none focus:border-ink/40"
         />
       </div>

@@ -44,19 +44,25 @@ export async function POST(request: Request) {
     );
   }
 
+  // Invoice is optional. If the client sent either field, both must be
+  // present and well-formed — but sending neither (null/undefined) is fine.
+  const hasInvoice = invoiceUrl != null || invoiceFileName != null;
   if (
-    typeof invoiceUrl !== "string" ||
-    !invoiceUrl ||
-    typeof invoiceFileName !== "string" ||
-    !invoiceFileName
+    hasInvoice &&
+    (typeof invoiceUrl !== "string" ||
+      !invoiceUrl ||
+      typeof invoiceFileName !== "string" ||
+      !invoiceFileName)
   ) {
     return NextResponse.json(
-      { error: "An invoice is required." },
+      { error: "Invalid invoice data." },
       { status: 400 }
     );
   }
 
-  const allUrls = [...beforeUrls, ...afterUrls, invoiceUrl];
+  const allUrls = hasInvoice
+    ? [...beforeUrls, ...afterUrls, invoiceUrl as string]
+    : [...beforeUrls, ...afterUrls];
 
   try {
     const [beforeImages, afterImages, invoice] = await Promise.all([
@@ -66,7 +72,9 @@ export async function POST(request: Request) {
       Promise.all(
         afterUrls.map((url, i) => fetchAsAttachment(url, `after-${i + 1}.jpg`))
       ),
-      fetchAsAttachment(invoiceUrl, invoiceFileName),
+      hasInvoice
+        ? fetchAsAttachment(invoiceUrl as string, invoiceFileName as string)
+        : Promise.resolve(undefined),
     ]);
 
     const result = await sendJobCompletionEmail({
