@@ -15,7 +15,7 @@ export default function Header() {
           {/* Brand */}
           <Link href="/" className="flex items-center gap-3">
             <Image
-              src="/logo.png"
+              src="/brand.png"
               alt="Pro Clean Bristol logo"
               width={175}
               height={175}
