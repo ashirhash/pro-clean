@@ -20,6 +20,7 @@ export default function LoginForm() {
     const payload = {
       username: String(data.get("username") ?? ""),
       password: String(data.get("password") ?? ""),
+      rememberMe: data.get("rememberMe") === "on",
     };
 
     try {
@@ -78,6 +79,16 @@ export default function LoginForm() {
           className="w-full px-4 py-2.5 rounded-lg border border-ink/15 text-base font-tagline placeholder:text-ink/50 focus:outline-none focus:border-ink/40"
         />
       </div>
+
+      <label className="flex items-center gap-2 font-tagline text-sm cursor-pointer select-none">
+        <input
+          type="checkbox"
+          name="rememberMe"
+          defaultChecked
+          className="w-4 h-4 rounded border-ink/30 accent-purple-brand"
+        />
+        Remember me
+      </label>
 
       <button
         type="submit"

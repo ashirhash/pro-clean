@@ -1,8 +1,19 @@
 import { NextResponse } from "next/server";
 import { del, get } from "@vercel/blob";
 import { sendJobCompletionEmail, type EmailAttachment } from "@/lib/sendMail";
+import type { CategoryCount } from "@/utils/interface";
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isCategoryCountArray = (value: unknown): value is CategoryCount[] =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      item != null &&
+      typeof item === "object" &&
+      typeof (item as CategoryCount).label === "string" &&
+      typeof (item as CategoryCount).count === "number"
+  );
 
 async function fetchAsAttachment(
   url: string,
@@ -17,8 +28,22 @@ async function fetchAsAttachment(
 }
 
 export async function POST(request: Request) {
-  const { clientEmail, beforeUrls, afterUrls, invoiceUrl, invoiceFileName } =
-    await request.json();
+  const {
+    clientEmail,
+    beforeUrls,
+    afterUrls,
+    invoiceUrl,
+    invoiceFileName,
+    beforeCategories: rawBeforeCategories,
+    afterCategories: rawAfterCategories,
+  } = await request.json();
+
+  const beforeCategories = isCategoryCountArray(rawBeforeCategories)
+    ? rawBeforeCategories
+    : undefined;
+  const afterCategories = isCategoryCountArray(rawAfterCategories)
+    ? rawAfterCategories
+    : undefined;
 
   if (typeof clientEmail !== "string" || !EMAIL_REGEX.test(clientEmail)) {
     return NextResponse.json(
@@ -82,6 +107,8 @@ export async function POST(request: Request) {
       beforeImages,
       afterImages,
       invoice,
+      beforeCategories,
+      afterCategories,
     });
 
     if (!result.success) {

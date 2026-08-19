@@ -4,9 +4,16 @@ export default interface MailDetails {
     message: string;
   }
 
+export interface CategoryCount {
+  label: string;
+  count: number;
+}
+
 export interface JobEmailDetails {
   clientEmail: string;
   beforeCount: number;
   afterCount: number;
   invoiceFileName?: string;
+  beforeCategories?: CategoryCount[];
+  afterCategories?: CategoryCount[];
 }

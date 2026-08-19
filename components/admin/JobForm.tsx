@@ -1,11 +1,25 @@
 "use client";
 
-import { useState, type ChangeEvent, type SubmitEvent } from "react";
+import {
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+  type SubmitEvent,
+} from "react";
+import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { compressImage } from "@/utils/compressImage";
 
 type PhotoStatus = "uploading" | "ready" | "error";
 type Side = "before" | "after";
 type SubmitStatus = "idle" | "sending" | "sent" | "error";
+
+type CategoryKey =
+  | "bedroom"
+  | "bathroom"
+  | "kitchen"
+  | "hallway"
+  | "stairsLanding"
+  | "additional";
 
 interface Photo {
   id: string;
@@ -14,12 +28,41 @@ interface Photo {
   status: PhotoStatus;
 }
 
+interface CategorySlot {
+  id: string;
+  photos: Photo[];
+}
+
+type CategoryPhotos = Record<CategoryKey, CategorySlot[]>;
+
 interface InvoiceFile {
   fileName: string;
   blobUrl: string | null;
   status: PhotoStatus;
   error?: string;
 }
+
+const CATEGORIES: { key: CategoryKey; label: string }[] = [
+  { key: "bedroom", label: "Bedroom" },
+  { key: "bathroom", label: "Bathroom" },
+  { key: "kitchen", label: "Kitchen" },
+  { key: "hallway", label: "Hallway" },
+  { key: "stairsLanding", label: "Stairs and Landing" },
+  { key: "additional", label: "Additional Images" },
+];
+
+const createEmptyCategories = (): CategoryPhotos => {
+  const categories = {} as CategoryPhotos;
+  for (const { key } of CATEGORIES) {
+    categories[key] = [{ id: `${key}-0`, photos: [] }];
+  }
+  return categories;
+};
+
+const allPhotos = (categories: CategoryPhotos): Photo[] =>
+  CATEGORIES.flatMap(({ key }) =>
+    categories[key].flatMap((slot) => slot.photos)
+  );
 
 const INVOICE_ACCEPT = ".pdf,.doc,.docx,.png,.jpg,.jpeg";
 
@@ -28,13 +71,53 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const inputClass =
   "w-full px-4 py-2.5 rounded-lg border border-ink/15 text-base font-tagline placeholder:text-ink/50 focus:outline-none focus:border-ink/40";
 
+function Accordion({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(true);
+
+  return (
+    <div className="border border-ink/15 rounded-2xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-5 py-4 bg-purple-mist/60 text-left"
+      >
+        <span className="font-luckiest font-extrabold uppercase leading-none tracking-[-0.01em] text-lg">
+          {title}
+        </span>
+        <svg
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className={`w-4 h-4 shrink-0 text-ink/60 transition-transform ${
+            open ? "rotate-180" : ""
+          }`}
+        >
+          <path d="M5 7l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="flex flex-col gap-6 p-5 pt-4 border-t border-ink/10">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PhotoPicker({
-  label,
   photos,
   onAdd,
   onRemove,
 }: {
-  label: string;
   photos: Photo[];
   onAdd: (file: File) => void;
   onRemove: (photo: Photo) => void;
@@ -51,53 +134,112 @@ function PhotoPicker({
   };
 
   return (
-    <div className="flex flex-col gap-2">
-      <span className="font-tagline font-semibold text-sm">{label}</span>
-
-      <div className="flex flex-wrap gap-3">
-        {photos.map((photo) => (
-          <div
-            key={photo.id}
-            className="relative w-20 h-20 rounded-lg overflow-hidden border border-ink/15"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={photo.previewUrl}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-            {photo.status === "uploading" && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-[11px] font-tagline">
-                Uploading...
-              </div>
-            )}
-            {photo.status === "error" && (
-              <div className="absolute inset-0 bg-red-600/70 flex items-center justify-center text-white text-[11px] font-tagline">
-                Failed
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => onRemove(photo)}
-              aria-label="Remove photo"
-              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-5 text-center"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-
-        <label className="w-20 h-20 rounded-lg border border-dashed border-ink/30 flex items-center justify-center text-ink/50 text-[13px] font-tagline cursor-pointer text-center px-1">
-          + Add
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleChange}
-            className="hidden"
+    <div className="flex flex-wrap gap-3">
+      {photos.map((photo) => (
+        <div
+          key={photo.id}
+          className="relative w-20 h-20 rounded-lg overflow-hidden border border-ink/15"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={photo.previewUrl}
+            alt=""
+            className="w-full h-full object-cover"
           />
-        </label>
+          {photo.status === "uploading" && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center text-white text-[11px] font-tagline">
+              Uploading...
+            </div>
+          )}
+          {photo.status === "error" && (
+            <div className="absolute inset-0 bg-red-600/70 flex items-center justify-center text-white text-[11px] font-tagline">
+              Failed
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => onRemove(photo)}
+            aria-label="Remove photo"
+            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 text-white text-xs leading-5 text-center"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+
+      <label className="w-20 h-20 rounded-lg border border-dashed border-ink/30 flex items-center justify-center text-ink/50 text-[13px] font-tagline cursor-pointer text-center px-1">
+        + Add
+        <input
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handleChange}
+          className="hidden"
+        />
+      </label>
+    </div>
+  );
+}
+
+function CategorySection({
+  label,
+  slots,
+  allowAddSlot = true,
+  onAddPhoto,
+  onRemovePhoto,
+  onAddSlot,
+  onRemoveSlot,
+}: {
+  label: string;
+  slots: CategorySlot[];
+  allowAddSlot?: boolean;
+  onAddPhoto: (slotId: string, file: File) => void;
+  onRemovePhoto: (slotId: string, photo: Photo) => void;
+  onAddSlot: () => void;
+  onRemoveSlot: (slotId: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between">
+        <span className="font-tagline font-semibold text-sm">{label}</span>
+        {allowAddSlot && (
+          <button
+            type="button"
+            onClick={onAddSlot}
+            aria-label={`Add another ${label} section`}
+            title={`Add another ${label} section`}
+            className="w-6 h-6 rounded-full border border-ink/20 text-ink/60 flex items-center justify-center hover:bg-ink/5"
+          >
+            <FiPlus size={13} />
+          </button>
+        )}
       </div>
+
+      {slots.map((slot, index) => (
+        <div key={slot.id} className="flex flex-col gap-2">
+          {index > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="font-tagline text-xs text-ink/50">
+                {label} {index + 1}
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemoveSlot(slot.id)}
+                aria-label={`Remove ${label} ${index + 1}`}
+                title={`Remove ${label} ${index + 1}`}
+                className="text-red-600 hover:text-red-700 flex items-center"
+              >
+                <FiTrash2 size={14} />
+              </button>
+            </div>
+          )}
+          <PhotoPicker
+            photos={slot.photos}
+            onAdd={(file) => onAddPhoto(slot.id, file)}
+            onRemove={(photo) => onRemovePhoto(slot.id, photo)}
+          />
+        </div>
+      ))}
     </div>
   );
 }
@@ -159,25 +301,41 @@ function InvoicePicker({
 }
 
 export default function JobForm() {
-  const [beforePhotos, setBeforePhotos] = useState<Photo[]>([]);
-  const [afterPhotos, setAfterPhotos] = useState<Photo[]>([]);
+  const [beforeCategories, setBeforeCategories] =
+    useState<CategoryPhotos>(createEmptyCategories);
+  const [afterCategories, setAfterCategories] =
+    useState<CategoryPhotos>(createEmptyCategories);
   const [invoice, setInvoice] = useState<InvoiceFile | null>(null);
   const [clientEmail, setClientEmail] = useState("");
   const [status, setStatus] = useState<SubmitStatus>("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
-  const listSetter = (side: Side) =>
-    side === "before" ? setBeforePhotos : setAfterPhotos;
+  const categoriesSetter = (side: Side) =>
+    side === "before" ? setBeforeCategories : setAfterCategories;
 
-  const addPhoto = async (side: Side, file: File) => {
+  const addPhoto = async (
+    side: Side,
+    categoryKey: CategoryKey,
+    slotId: string,
+    file: File
+  ) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const setPhotos = listSetter(side);
+    const setCategories = categoriesSetter(side);
     const previewUrl = URL.createObjectURL(file);
+
+    const updateSlotPhotos = (updater: (photos: Photo[]) => Photo[]) => {
+      setCategories((prev) => ({
+        ...prev,
+        [categoryKey]: prev[categoryKey].map((slot) =>
+          slot.id === slotId ? { ...slot, photos: updater(slot.photos) } : slot
+        ),
+      }));
+    };
 
     // Show the thumbnail + "Uploading..." immediately, before any async
     // work, so a later failure never looks like nothing happened.
-    setPhotos((prev) => [
-      ...prev,
+    updateSlotPhotos((photos) => [
+      ...photos,
       { id, previewUrl, blobUrl: null, status: "uploading" },
     ]);
 
@@ -195,20 +353,32 @@ export default function JobForm() {
 
       if (!res.ok) throw new Error(body?.error || "Upload failed");
 
-      setPhotos((prev) =>
-        prev.map((p) =>
+      updateSlotPhotos((photos) =>
+        photos.map((p) =>
           p.id === id ? { ...p, blobUrl: body.url, status: "ready" } : p
         )
       );
     } catch {
-      setPhotos((prev) =>
-        prev.map((p) => (p.id === id ? { ...p, status: "error" } : p))
+      updateSlotPhotos((photos) =>
+        photos.map((p) => (p.id === id ? { ...p, status: "error" } : p))
       );
     }
   };
 
-  const removePhoto = async (side: Side, photo: Photo) => {
-    listSetter(side)((prev) => prev.filter((p) => p.id !== photo.id));
+  const removePhoto = (
+    side: Side,
+    categoryKey: CategoryKey,
+    slotId: string,
+    photo: Photo
+  ) => {
+    categoriesSetter(side)((prev) => ({
+      ...prev,
+      [categoryKey]: prev[categoryKey].map((slot) =>
+        slot.id === slotId
+          ? { ...slot, photos: slot.photos.filter((p) => p.id !== photo.id) }
+          : slot
+      ),
+    }));
     URL.revokeObjectURL(photo.previewUrl);
 
     if (photo.blobUrl) {
@@ -218,6 +388,41 @@ export default function JobForm() {
         body: JSON.stringify({ url: photo.blobUrl }),
       }).catch(() => {});
     }
+  };
+
+  const addCategorySlot = (side: Side, categoryKey: CategoryKey) => {
+    const id = `${categoryKey}-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+    categoriesSetter(side)((prev) => ({
+      ...prev,
+      [categoryKey]: [...prev[categoryKey], { id, photos: [] }],
+    }));
+  };
+
+  const removeCategorySlot = (
+    side: Side,
+    categoryKey: CategoryKey,
+    slotId: string
+  ) => {
+    categoriesSetter(side)((prev) => {
+      const slot = prev[categoryKey].find((s) => s.id === slotId);
+      slot?.photos.forEach((photo) => {
+        URL.revokeObjectURL(photo.previewUrl);
+        if (photo.blobUrl) {
+          fetch("/api/admin/stage-upload", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: photo.blobUrl }),
+          }).catch(() => {});
+        }
+      });
+
+      return {
+        ...prev,
+        [categoryKey]: prev[categoryKey].filter((s) => s.id !== slotId),
+      };
+    });
   };
 
   const addInvoice = async (file: File) => {
@@ -258,12 +463,25 @@ export default function JobForm() {
     setInvoice(null);
   };
 
-  const readyUrls = (photos: Photo[]) =>
-    photos.filter((p) => p.status === "ready").map((p) => p.blobUrl as string);
+  const readyUrls = (categories: CategoryPhotos) =>
+    allPhotos(categories)
+      .filter((p) => p.status === "ready")
+      .map((p) => p.blobUrl as string);
+
+  const categoryCounts = (categories: CategoryPhotos) =>
+    CATEGORIES.map(({ key, label }) => ({
+      label,
+      count: categories[key].reduce(
+        (sum, slot) =>
+          sum + slot.photos.filter((p) => p.status === "ready").length,
+        0
+      ),
+    })).filter((c) => c.count > 0);
 
   const hasPendingUploads =
-    [...beforePhotos, ...afterPhotos].some((p) => p.status === "uploading") ||
-    invoice?.status === "uploading";
+    [...allPhotos(beforeCategories), ...allPhotos(afterCategories)].some(
+      (p) => p.status === "uploading"
+    ) || invoice?.status === "uploading";
 
   // Invoice is optional: it's fine to submit with no invoice at all, but if
   // the admin attached one, don't let them submit while it's still
@@ -271,18 +489,19 @@ export default function JobForm() {
   const invoiceOk = !invoice || invoice.status === "ready";
 
   const canSubmit =
-    readyUrls(beforePhotos).length > 0 &&
-    readyUrls(afterPhotos).length > 0 &&
+    readyUrls(beforeCategories).length > 0 &&
+    readyUrls(afterCategories).length > 0 &&
     invoiceOk &&
     EMAIL_REGEX.test(clientEmail) &&
     !hasPendingUploads &&
     status !== "sending";
 
   const resetForm = () => {
-    beforePhotos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-    afterPhotos.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-    setBeforePhotos([]);
-    setAfterPhotos([]);
+    [...allPhotos(beforeCategories), ...allPhotos(afterCategories)].forEach(
+      (p) => URL.revokeObjectURL(p.previewUrl)
+    );
+    setBeforeCategories(createEmptyCategories());
+    setAfterCategories(createEmptyCategories());
     setInvoice(null);
     setClientEmail("");
   };
@@ -300,8 +519,10 @@ export default function JobForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientEmail,
-          beforeUrls: readyUrls(beforePhotos),
-          afterUrls: readyUrls(afterPhotos),
+          beforeUrls: readyUrls(beforeCategories),
+          afterUrls: readyUrls(afterCategories),
+          beforeCategories: categoryCounts(beforeCategories),
+          afterCategories: categoryCounts(afterCategories),
           invoiceUrl: invoice?.status === "ready" ? invoice.blobUrl : null,
           invoiceFileName: invoice?.status === "ready" ? invoice.fileName : null,
         }),
@@ -349,19 +570,39 @@ export default function JobForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      <PhotoPicker
-        label="Before Photos"
-        photos={beforePhotos}
-        onAdd={(file) => addPhoto("before", file)}
-        onRemove={(photo) => removePhoto("before", photo)}
-      />
+      <Accordion title="Before Photos">
+        {CATEGORIES.map(({ key, label }) => (
+          <CategorySection
+            key={key}
+            label={label}
+            slots={beforeCategories[key]}
+            allowAddSlot={key !== "additional"}
+            onAddPhoto={(slotId, file) => addPhoto("before", key, slotId, file)}
+            onRemovePhoto={(slotId, photo) =>
+              removePhoto("before", key, slotId, photo)
+            }
+            onAddSlot={() => addCategorySlot("before", key)}
+            onRemoveSlot={(slotId) => removeCategorySlot("before", key, slotId)}
+          />
+        ))}
+      </Accordion>
 
-      <PhotoPicker
-        label="After Photos"
-        photos={afterPhotos}
-        onAdd={(file) => addPhoto("after", file)}
-        onRemove={(photo) => removePhoto("after", photo)}
-      />
+      <Accordion title="After Photos">
+        {CATEGORIES.map(({ key, label }) => (
+          <CategorySection
+            key={key}
+            label={label}
+            slots={afterCategories[key]}
+            allowAddSlot={key !== "additional"}
+            onAddPhoto={(slotId, file) => addPhoto("after", key, slotId, file)}
+            onRemovePhoto={(slotId, photo) =>
+              removePhoto("after", key, slotId, photo)
+            }
+            onAddSlot={() => addCategorySlot("after", key)}
+            onRemoveSlot={(slotId) => removeCategorySlot("after", key, slotId)}
+          />
+        ))}
+      </Accordion>
 
       <InvoicePicker invoice={invoice} onAdd={addInvoice} onRemove={removeInvoice} />
 

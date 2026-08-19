@@ -2,6 +2,7 @@ import { SignJWT, jwtVerify } from "jose";
 
 export const SESSION_COOKIE = "admin_session";
 const SESSION_DURATION = "7d";
+const SHORT_SESSION_DURATION = "1d";
 
 function getSecretKey() {
   const secret = process.env.SESSION_SECRET;
@@ -11,11 +12,11 @@ function getSecretKey() {
   return new TextEncoder().encode(secret);
 }
 
-export async function createSessionToken() {
+export async function createSessionToken(remember: boolean = true) {
   return new SignJWT({ role: "admin" })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(SESSION_DURATION)
+    .setExpirationTime(remember ? SESSION_DURATION : SHORT_SESSION_DURATION)
     .sign(getSecretKey());
 }
 

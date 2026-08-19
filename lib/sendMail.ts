@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import MailDetails from "../utils/interface";
+import MailDetails, { CategoryCount } from "../utils/interface";
 import { buildHtml, buildText } from "@/utils/formateEmail";
 import { buildJobHtml, buildJobText, JOB_EMAIL_SUBJECT } from "@/utils/formatJobEmail";
 
@@ -44,17 +44,23 @@ export const sendJobCompletionEmail = async ({
   beforeImages,
   afterImages,
   invoice,
+  beforeCategories,
+  afterCategories,
 }: {
   clientEmail: string;
   beforeImages: EmailAttachment[];
   afterImages: EmailAttachment[];
   invoice?: EmailAttachment;
+  beforeCategories?: CategoryCount[];
+  afterCategories?: CategoryCount[];
 }) => {
   const details = {
     clientEmail,
     beforeCount: beforeImages.length,
     afterCount: afterImages.length,
     invoiceFileName: invoice?.filename,
+    beforeCategories,
+    afterCategories,
   };
 
   const attachments = invoice
@@ -65,6 +71,7 @@ export const sendJobCompletionEmail = async ({
     const { data, error } = await resend.emails.send({
       from: EMAIL_FROM,
       to: clientEmail,
+      bcc: CONTACT_EMAIL,
       subject: JOB_EMAIL_SUBJECT,
       text: buildJobText(details),
       html: buildJobHtml(details),
